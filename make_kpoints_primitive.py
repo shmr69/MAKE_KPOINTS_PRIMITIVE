@@ -61,6 +61,31 @@ def read_poscar_atoms(filename):
     positions = np.array(positions)
     return scale, atom_types, atom_counts, positions
 
+def remove_duplicates_fractional(positions, tol=1e-5):
+    """
+    Remove duplicate atoms in fractional coordinates considering periodic boundary conditions.
+    Inputs:
+        positions: Nx3 array of fractional coordinates
+        tol: tolerance for minimum-image distance
+    Outputs:
+        unique_positions: Mx3 array of unique positions
+    """
+    positions = positions % 1.0  # wrap into [0,1)
+    unique_positions = []
+    for pos in positions:
+        # Compute minimum-image distance to all previously accepted atoms
+        is_duplicate = False
+        for u in unique_positions:
+            delta = np.abs(pos - u)
+            delta = np.minimum(delta, 1.0 - delta)  # minimum image
+            if np.all(delta < tol):
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            unique_positions.append(pos)
+    return np.array(unique_positions)
+
+
 def write_poscar(filename, scale, lattice, atom_types, atom_counts, positions):
     """
     Write the transformed primitive cell to a POSCAR file.
@@ -73,15 +98,33 @@ def write_poscar(filename, scale, lattice, atom_types, atom_counts, positions):
         - positions : Nx3 np.ndarray
     Outputs: None
     """
+    tol = 1e-5  # tolerance for duplicate detection in fractional coordinates
+    # split positions by atom type
+    pos_by_type = []
+    start = 0
+    for count in atom_counts:
+        pos_by_type.append(positions[start:start+count])
+        start += count
+
+    unique_positions_by_type = []
+    new_counts = []
+    for pos_type in pos_by_type:
+        unique_pos = remove_duplicates_fractional(pos_type, tol)
+        unique_positions_by_type.append(unique_pos)
+        new_counts.append(len(unique_pos))
+    
+    # concatenate unique positions in order of atom types
+    final_positions = np.vstack(unique_positions_by_type)
+    # write POSCAR
     with open(filename, "w") as f:
-        f.write(f"Primitive cell generated from {poscar_file}\n")
+        f.write(f"Primitive cell generated from {poscar_file} (duplicates removed)\n")
         f.write(f"{scale:.16f}\n")
         for vec in lattice:
             f.write("  " + "  ".join(f"{x:.16f}" for x in vec) + "\n")
         f.write("  " + "  ".join(atom_types) + "\n")
-        f.write("  " + "  ".join(str(x) for x in atom_counts) + "\n")
+        f.write("  " + "  ".join(str(x) for x in new_counts) + "\n")
         f.write("Direct\n")
-        for pos in positions:
+        for pos in final_positions:
             f.write("  " + "  ".join(f"{x:.16f}" for x in pos) + "\n")
 
 def reciprocal_lattice(A):

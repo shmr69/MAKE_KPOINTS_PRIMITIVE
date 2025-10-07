@@ -273,6 +273,13 @@ if match_spacing:
     spacing_prim_rescaled = np.linalg.norm(B_prim, axis=0) / np.array([n_prim_new[0], n_prim_new[1], n_prim_new[2]])
     print("  Directional reciprocal spacing of rescaled primitive grid (Å⁻¹):", 
           "  ".join(f"{x:.4f}" for x in spacing_prim_rescaled))
+    # anisotropy check
+    max_s = spacing_prim_rescaled.max()
+    min_s = spacing_prim_rescaled.min()
+    ratio = max_s / min_s if min_s > 0 else np.inf
+    if ratio > 2.0:
+        print(f"\n WARNING: Primitive reciprocal grid is anisotropic (max/min spacing ratio = {ratio:.2f}).")
+        print("   Consider adjusting the grid or transformation if this is undesirable.\n")
 elif match_min_distance:
     # --match-min-distance (density-matched)
     # start with small initial grid along primitive axes
@@ -291,17 +298,18 @@ elif match_min_distance:
     spacing_prim_rescaled = np.linalg.norm(B_prim, axis=0) / np.array([n_prim_new[0], n_prim_new[1], n_prim_new[2]])
     print("  Directional reciprocal spacing of rescaled primitive grid (Å⁻¹):", 
           "  ".join(f"{x:.4f}" for x in spacing_prim_rescaled))
+    # anisotropy check
+    max_s = spacing_prim_rescaled.max()
+    min_s = spacing_prim_rescaled.min()
+    ratio = max_s / min_s if min_s > 0 else np.inf
+    if ratio > 2.0:
+        print(f"\n WARNING: Primitive reciprocal grid is anisotropic (max/min spacing ratio = {ratio:.2f}).")
+        print("   Consider adjusting the grid or transformation if this is undesirable.\n")
 
 print(f"  Exact minimum inter-k-point distance (conventional grid): {min_dist_conv:.4f} Å⁻¹")
 print(f"  Exact minimum inter-k-point distance (primitive grid):   {min_dist_prim:.4f} Å⁻¹\n")
 
-# anisotropy check
-max_s = spacing_prim_rescaled.max()
-min_s = spacing_prim_rescaled.min()
-ratio = max_s / min_s if min_s > 0 else np.inf
-if ratio > 2.0:
-    print(f"\n WARNING: Primitive reciprocal grid is anisotropic (max/min spacing ratio = {ratio:.2f}).")
-    print("   Consider adjusting the grid or transformation if this is undesirable.\n")
+
 
 
 
